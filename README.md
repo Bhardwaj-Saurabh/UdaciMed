@@ -299,17 +299,9 @@ outputs = session.run(None, {'input': input_data})
 
 ## 📧 Contact & Portfolio
 
-**Author:** [Your Name]
-**LinkedIn:** [Your LinkedIn]
-**GitHub:** [Your GitHub]
-**Email:** [Your Email]
-
-**Other ML Projects:**
-- [Project 1 - Description]
-- [Project 2 - Description]
-- [Project 3 - Description]
-
----
+**Author:** [Saurabh Bhardwaj]
+**LinkedIn:** [https://www.linkedin.com/in/saurabhbhardwajofficial/]
+**Portfolio:** [https://bhardwaj-saurabh.github.io/]
 
 ## 📄 License
 
