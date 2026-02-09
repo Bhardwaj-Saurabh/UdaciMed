@@ -398,20 +398,81 @@ def apply_lowrank_factorization(
 
     print("Applying low-rank factorization optimization...")
 
-    # TODO: Factorizes large linear layers into low-rank approximations.
-    # HINT: Low-rank factorization decomposes a large weight matrix W into two smaller matrices U and V
-    # such that W ≈ U @ V. This dramatically reduces parameters while maintaining representational capacity.
-    # Remember that higher rank = better approximation but less compression
-    #
-    # See https://arikpoz.github.io/posts/2025-04-29-low-rank-factorization-in-pytorch-compressing-neural-networks-with-linear-algebra/
-    # for explanation and code template, and consider how to initialize parameters with respect to the new rank.
+    # Iterate through all modules and replace large Linear layers
+    for name, module in list(optimized_model.named_modules()):
+        if isinstance(module, nn.Linear):
+            # Calculate number of parameters
+            num_params = module.weight.numel()
 
-    # Add your code here
+            if num_params >= min_params:
+                # Get layer dimensions
+                out_features, in_features = module.weight.shape
+                bias = module.bias is not None
+
+                # Calculate rank for factorization
+                rank = max(1, int(min(out_features, in_features) * rank_ratio))
+
+                # Perform SVD on weight matrix for optimal initialization
+                with torch.no_grad():
+                    U, S, Vt = torch.linalg.svd(module.weight.data, full_matrices=False)
+
+                    # Keep top-k singular values
+                    U_k = U[:, :rank]  # (out_features, rank)
+                    S_k = S[:rank]  # (rank,)
+                    Vt_k = Vt[:rank, :]  # (rank, in_features)
+
+                    # Create factorized representation: W ≈ U_k @ diag(S_k) @ Vt_k
+                    # Split into two linear layers
+                    first_weight = (
+                        torch.diag(S_k.sqrt()) @ Vt_k
+                    ).t()  # (in_features, rank)
+                    second_weight = U_k @ torch.diag(S_k.sqrt())  # (out_features, rank)
+
+                # Create two smaller Linear layers
+                first_layer = nn.Linear(in_features, rank, bias=False)
+                second_layer = nn.Linear(rank, out_features, bias=bias)
+
+                # Initialize weights with SVD decomposition
+                first_layer.weight.data = first_weight.t()
+                second_layer.weight.data = second_weight
+
+                # Copy bias if present
+                if bias:
+                    second_layer.bias.data = module.bias.data.clone()
+
+                # Create sequential module
+                factorized_layer = nn.Sequential(first_layer, second_layer)
+
+                # Replace the module in the parent
+                parent_name = ".".join(name.split(".")[:-1])
+                child_name = name.split(".")[-1]
+
+                if parent_name:
+                    parent = optimized_model.get_submodule(parent_name)
+                    setattr(parent, child_name, factorized_layer)
+                else:
+                    setattr(optimized_model, child_name, factorized_layer)
+
+                replacements += 1
+
+                # Calculate parameter reduction
+                original_params = num_params + (out_features if bias else 0)
+                new_params = (
+                    (in_features * rank)
+                    + (rank * out_features)
+                    + (out_features if bias else 0)
+                )
+                reduction = ((original_params - new_params) / original_params) * 100
+
+                print(
+                    f"   Factorized layer '{name}': {out_features}×{in_features} → {rank} rank "
+                    f"({reduction:.1f}% parameter reduction)"
+                )
 
     # Report optimization status
     if replacements > 0:
         print(
-            f"LOW RANK FACTORIZATION completed: Successfully applied to layers with {replacements} replacements"
+            f"LOW RANK FACTORIZATION completed: Successfully applied to {replacements} layer(s)"
         )
     else:
         print(
