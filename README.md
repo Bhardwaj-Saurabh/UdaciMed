@@ -300,8 +300,10 @@ outputs = session.run(None, {'input': input_data})
 ## 📧 Contact & Portfolio
 
 **Author:** Saurabh Bhardwaj
-**LinkedIn:** [](https://www.linkedin.com/in/saurabhbhardwajofficial/)
-**Portfolio:** [](https://bhardwaj-saurabh.github.io/)
+
+**LinkedIn:** [https://www.linkedin.com/in/saurabhbhardwajofficial/](https://www.linkedin.com/in/saurabhbhardwajofficial/)
+
+**Portfolio:** [(https://bhardwaj-saurabh.github.io/](https://bhardwaj-saurabh.github.io/)
 
 ## 📄 License
 
